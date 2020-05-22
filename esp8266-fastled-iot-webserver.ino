@@ -22,6 +22,7 @@ FASTLED_USING_NAMESPACE
 extern "C" {
 #include "user_interface.h"
 }
+#include "Addresses.h"
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPUpdateServer.h>
@@ -56,18 +57,18 @@ extern "C" {
 
 /*######################## MAIN CONFIG ########################*/
 #define LED_TYPE		WS2812				// You might also use a WS2811 or any other strip that is Fastled compatible 
-#define DATA_PIN		D3					// Be aware: the pin mapping might be different on boards like the NodeMCU
+#define DATA_PIN		D4					// Be aware: the pin mapping might be different on boards like the NodeMCU
 //#define CLK_PIN		D5				// Only required when using 4-pin SPI-based LEDs
 #define CORRECTION		UncorrectedColor    // If colors are weird use TypicalLEDStrip
 #define COLOR_ORDER		GRB					// Change this if colors are swapped (in my case, red was swapped with green)
-#define MILLI_AMPS		10000				// IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
+#define MILLI_AMPS		4000				// IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
 #define VOLTS			5					// Voltage of the Power Supply
 
 //#define REMOVE_VISUALIZATION		// remove the comment to completly disable all udp-based visualization patterns
 
 #define HOSTNAME "LEDs"				// Name that appears in your network, don't use whitespaces, use "-" instead
 
-#define DEVICE_TYPE 4				// The following types are available
+#define DEVICE_TYPE 3				// The following types are available
 /*
 	0: Generic LED-Strip: Just a regular LED-Strip without special hardware
 		* Easiest: 5V WS2812B LED-Strip:		https://s.click.aliexpress.com/e/_dZ1hCJ7
@@ -612,9 +613,9 @@ void setSolidColor(uint8_t r, uint8_t g, uint8_t b, bool updatePattern = true)
 {
 	solidColor = CRGB(r, g, b);
 
-	EEPROM.write(2, r);
-	EEPROM.write(3, g);
-	EEPROM.write(4, b);
+	EEPROM.write(ADDR_RED, r);
+	EEPROM.write(ADDR_GREEN, g);
+	EEPROM.write(ADDR_BLUE, b);
 	EEPROM.commit();
 
 	if (updatePattern && currentPatternIndex != patternCount - 2)setPattern(patternCount - 1);
@@ -1239,17 +1240,17 @@ void loop() {
 
 void loadSettings()
 {
-	brightness = EEPROM.read(0);
+	brightness = EEPROM.read(ADDR_BRIGHTNESS);
 
-	currentPatternIndex = EEPROM.read(1);
+	currentPatternIndex = EEPROM.read(ADDR_CURRENT_PATTERN);
 	if (currentPatternIndex < 0)
 		currentPatternIndex = 0;
 	else if (currentPatternIndex >= patternCount)
 		currentPatternIndex = patternCount - 1;
 
-	byte r = EEPROM.read(2);
-	byte g = EEPROM.read(3);
-	byte b = EEPROM.read(4);
+	byte r = EEPROM.read(ADDR_RED);
+	byte g = EEPROM.read(ADDR_GREEN);
+	byte b = EEPROM.read(ADDR_BLUE);
 
 	if (r == 0 && g == 0 && b == 0)
 	{
@@ -1259,12 +1260,12 @@ void loadSettings()
 		solidColor = CRGB(r, g, b);
 	}
 
-	power = EEPROM.read(5);
+	power = EEPROM.read(ADDR_POWER);
 
-	autoplay = EEPROM.read(6);
-	autoplayDuration = EEPROM.read(7);
+	autoplay = EEPROM.read(ADDR_AUTOPLAY);
+	autoplayDuration = EEPROM.read(ADDR_AUTOPLAY_DURATION);
 
-	currentPaletteIndex = EEPROM.read(8);
+	currentPaletteIndex = EEPROM.read(ADDR_CURRENT_PALETTE);
 	if (currentPaletteIndex < 0)
 		currentPaletteIndex = 0;
 	else if (currentPaletteIndex >= paletteCount)
@@ -1275,7 +1276,7 @@ void setPower(uint8_t value)
 {
 	power = value == 0 ? 0 : 1;
 
-	EEPROM.write(5, power);
+	EEPROM.write(ADDR_POWER, power);
 	EEPROM.commit();
 
 	broadcastInt("power", power);
@@ -1285,7 +1286,7 @@ void setAutoplay(uint8_t value)
 {
 	autoplay = value == 0 ? 0 : 1;
 
-	EEPROM.write(6, autoplay);
+	EEPROM.write(ADDR_AUTOPLAY, autoplay);
 	EEPROM.commit();
 
 	broadcastInt("autoplay", autoplay);
@@ -1295,7 +1296,7 @@ void setAutoplayDuration(uint8_t value)
 {
 	autoplayDuration = value;
 
-	EEPROM.write(7, autoplayDuration);
+	EEPROM.write(ADDR_AUTOPLAY_DURATION, autoplayDuration);
 	EEPROM.commit();
 
 	autoPlayTimeout = millis() + (autoplayDuration * 1000);
@@ -1338,7 +1339,7 @@ void adjustPattern(bool up)
 		currentPatternIndex = 0;
 
 	if (autoplay == 0) {
-		EEPROM.write(1, currentPatternIndex);
+		EEPROM.write(ADDR_CURRENT_PATTERN, currentPatternIndex);
 		EEPROM.commit();
 	}
 
@@ -1361,7 +1362,7 @@ void setPattern(uint8_t value)
 	currentPatternIndex = value;
 
 	if (autoplay == 0) {
-		EEPROM.write(1, currentPatternIndex);
+		EEPROM.write(ADDR_CURRENT_PATTERN, currentPatternIndex);
 		EEPROM.commit();
 	}
 
@@ -1386,7 +1387,7 @@ void setPalette(uint8_t value)
 
 	currentPaletteIndex = value;
 
-	EEPROM.write(8, currentPaletteIndex);
+	EEPROM.write(ADDR_CURRENT_PALETTE, currentPaletteIndex);
 	EEPROM.commit();
 
 	broadcastInt("palette", currentPaletteIndex);
